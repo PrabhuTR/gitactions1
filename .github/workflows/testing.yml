@@ -37,7 +37,7 @@ jobs:
 
   call-reusable-workflow:
     needs: build-job
-    uses: PrabhuTR/Reuseable-actions/.github/workflows/Send%20Teams%20Notification.yml@main
+    uses: PrabhuTR/Reuseable-actions/.github/workflows/Send-Teams-Notification.yml@main
     with:
       version_number: ${{ needs.build-job.outputs.Build_Number }}
       branch: ${{ github.event.inputs.Branch }}
