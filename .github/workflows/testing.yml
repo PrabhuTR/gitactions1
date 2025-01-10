@@ -20,16 +20,24 @@ on:
 jobs:
   build-job:
     runs-on: ubuntu-latest
+    env:
+      Build_Number: ${{ github.run_number }}
+      Branch_Name: ${{ github.event.inputs.Branch }}
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.Branch }}
 
-      # Other steps as necessary
+      # Additional steps for your build process
+      # e.g., setting up Java, building the project, etc.
+
+      - name: Set Build Number
+        run: echo "Build_Number=${{ github.run_number }}" >> $GITHUB_ENV
 
   call-reusable-workflow:
-    uses: PrabhuTR/Reuseable-actions/.github/workflows/send-teams-notification.yml@main
+    needs: build-job
+    uses: PrabhuTR/Reuseable-actions/.github/workflows/Send%20Teams%20Notification.yml@main
     with:
-      version_number: ${{ env.Build_Number }}
+      version_number: ${{ needs.build-job.outputs.Build_Number }}
       branch: ${{ github.event.inputs.Branch }}
