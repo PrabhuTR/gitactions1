@@ -18,60 +18,18 @@ on:
           - Rel
 
 jobs:
-  Build-Initiated:
+  build-job:
     runs-on: ubuntu-latest
-
-    env:
-      Run_Number: ${{ github.run_number }}
-      Branch_Name: ${{ github.event.inputs.Branch }}
-      SAMI_BAMS_ACCOUNT_NAME: ${{ secrets.SCM_JFROG_ACCOUNT_NAME }}
-      SAMI_BAMS_API_TOKEN: ${{ secrets.SCM_JFROG_API_TOKEN }}
-      base_path: ${{ github.workspace }}
-
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v2
         with:
-          ref: ${{ env.Branch_Name }}
+          ref: ${{ github.event.inputs.Branch }}
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'corretto'
-          java-version: '8'
-          cache: maven
+      # Other steps as necessary
 
-      - name: Setting up the build number for the build
-        shell: pwsh
-        id: set-build-number
-        run: |
-          $BranchName = "${{ env.Branch_Name }}"
-          $RunNumber = "${{ env.Run_Number }}"
-          $split = $BranchName -split '/'
-          $split1 = $split[0]
-          $split2 = $split[1]
-          if ($split1 -eq "release") {
-            $Build_Number = "$split2.0.$RunNumber"
-          } else {
-            $Build_Number = "0.0.0.$RunNumber"
-          }
-          echo "Build_Number=$Build_Number" >> $env:GITHUB_ENV
-
-      - name: Display the build number and Branch name for verification
-        run: |
-          echo "Build number is ${{ env.Build_Number }}"
-          echo "Build triggered on ${{ github.event.inputs.Branch }}"
-
-      - name: Display folder structure
-        run: sudo apt-get install tree -y && tree -L 3
-
-      - name: Set workflow number at job summary
-        run: |
-          echo "BRANCH_NAME=${{ github.event.inputs.Branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "BUILD_NUMBER=${{ env.Build_Number }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Call Reusable Workflow
-        uses: PrabhuTR/Reuseable-actions/.github/workflows/send-teams-notification.yml@main
-        with:
-          version_number: ${{ env.Build_Number }}
-          branch: ${{ github.event.inputs.Branch }}
+  call-reusable-workflow:
+    uses: PrabhuTR/Reuseable-actions/.github/workflows/send-teams-notification.yml@main
+    with:
+      version_number: ${{ env.Build_Number }}
+      branch: ${{ github.event.inputs.Branch }}
