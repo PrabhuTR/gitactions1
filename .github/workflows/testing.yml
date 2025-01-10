@@ -1,118 +1,77 @@
-#########################################################################################################################################################
-## File         : Batchsplitter-Dev/Rel-Build
-## Description  : This Job will trigger the Build based on the requrement of Dev team and will create an Jar file which is uploded as an artifact 
-##                to the gitrelease and Jfrog location generic-local/SCM-Publishing/BuildArtifacts/JDG/JWB-BLR/Batchsplitter/${{ env.Build_Number }}
-##                
-## 04-Sept-2024 : Author - Prabhu.P(TR Technology)
-##        By    : SCM-Bengluru
-#########################################################################################################################################################
-
-
 name: Batchsplitter-Build.yml
 run-name: Batchsplitter-${{ inputs.Build }}Build-${{ github.run_number }}
 
-
 on:
- workflow_dispatch:
-  inputs:
-   Branch: 
-     description: 'Enter the Branch to Build'
-     required: True
-     default: 'main'
-
-   Build:
-    description: 'Select The Build Type to Trigger'
-    required: true
-    default: Dev
-    type: choice
-    options:
-     - Dev
-     - Rel
+  workflow_dispatch:
+    inputs:
+      Branch: 
+        description: 'Enter the Branch to Build'
+        required: true
+        default: 'main'
+      Build:
+        description: 'Select The Build Type to Trigger'
+        required: true
+        default: Dev
+        type: choice
+        options:
+          - Dev
+          - Rel
 
 jobs:
- Build-Intiated:
-  runs-on: ubuntu-latest
- # runs-on: [ 'self-hosted', 'Windows', 'X64', 'SCM-JUDICIAL-3']
+  Build-Initiated:
+    runs-on: ubuntu-latest
 
+    env:
+      Run_Number: ${{ github.run_number }}
+      Branch_Name: ${{ github.event.inputs.Branch }}
+      SAMI_BAMS_ACCOUNT_NAME: ${{ secrets.SCM_JFROG_ACCOUNT_NAME }}
+      SAMI_BAMS_API_TOKEN: ${{ secrets.SCM_JFROG_API_TOKEN }}
+      base_path: ${{ github.workspace }}
 
-  env:
-    Run_Number: ${{ github.run_number }}
-    Branch_Name: ${{ github.event.inputs.Branch }}
-    SAMI_BAMS_ACCOUNT_NAME: ${{ secrets.SCM_JFROG_ACCOUNT_NAME }}
-    SAMI_BAMS_API_TOKEN: ${{ secrets.SCM_JFROG_API_TOKEN }}
-    base_path: ${{ github.workspace }}
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.Branch_Name }}
 
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '8'
+          cache: maven
 
-  steps:
-  - name: checkout the repo
-    uses: actions/checkout@v2
-    with:
-     ref: ${{ env.Branch_Name }}
+      - name: Setting up the build number for the build
+        shell: pwsh
+        id: set-build-number
+        run: |
+          $BranchName = "${{ env.Branch_Name }}"
+          $RunNumber = "${{ env.Run_Number }}"
+          $split = $BranchName -split '/'
+          $split1 = $split[0]
+          $split2 = $split[1]
+          if ($split1 -eq "release") {
+            $Build_Number = "$split2.0.$RunNumber"
+          } else {
+            $Build_Number = "0.0.0.$RunNumber"
+          }
+          echo "Build_Number=$Build_Number" >> $env:GITHUB_ENV
 
-  - name: set up the java 
-    uses: actions/setup-java@v3
-    with:
-     distribution: 'corretto'
-     java-version: '8'
-     cache: maven
+      - name: Display the build number and Branch name for verification
+        run: |
+          echo "Build number is ${{ env.Build_Number }}"
+          echo "Build triggered on ${{ github.event.inputs.Branch }}"
 
+      - name: Display folder structure
+        run: sudo apt-get install tree -y && tree -L 3
 
-     
-     
-  # - name: Setup Maven
-  #   # You may pin to the exact commit or the version.
-  #   # uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1
-  #   uses: stCarolas/setup-maven@v5
-  #   with:
-  #     # Version Spec of the version to use.  Examples: 10.x, 10.15.1, >=10.15.0
-  #     maven-version: 4.0
-            
-          
+      - name: Set workflow number at job summary
+        run: |
+          echo "BRANCH_NAME=${{ github.event.inputs.Branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "BUILD_NUMBER=${{ env.Build_Number }}" >> $GITHUB_STEP_SUMMARY
 
-  - name: Setting up the build number for the build
-    shell: pwsh
-    id: set-build-number
-    run: |
-      $BranchName = "${{ env.Branch_Name }}"
-      $RunNumber = "${{ env.Run_Number }}"
-  
-      $split = $BranchName -split '/'
-      $split1 = $split[0]
-      $split2 = $split[1]
-  
-      if ($split1 -eq "release") {
-        $Build_Number = "$split2.0.$RunNumber"
-      }
-      else {
-        $Build_Number = "0.0.0.$RunNumber"
-      }
-  
-      echo "Build_Number=$Build_Number" >> $env:GITHUB_ENV
-
-  - name: Display the build number and Branch name for verification
-    run: echo "Build number is $Build_Number"
-         echo "Build triggered on ${{ github.event.inputs.Branch }}"
-
-
-  - name: Display folder structure
-    run: sudo apt-get install tree -y && tree -L 3
-
-
-  - name: Set workflow number at job summary
-    run: echo BRANCH_NAME="${{ github.event.inputs.Branch }}" > $GITHUB_STEP_SUMMARY 
-
-  - name: Set workflow number at job summary
-    run: echo BUILD_NUMBER="${{ env.Build_Number }}" > $GITHUB_STEP_SUMMARY 
-
-
-
-
-  - name: Call Reusable Workflow
-    uses: PrabhuTR/Reuseable-actions/.github/workflows/send-teams-notification.yml@main
-    with:
+      - name: Call Reusable Workflow
+        uses: PrabhuTR/Reuseable-actions/.github/workflows/send-teams-notification.yml@main
+        with:
           version_number: ${{ env.Build_Number }}
           branch: ${{ github.event.inputs.Branch }}
-          
-  
- 
-  
